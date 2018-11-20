@@ -1,6 +1,11 @@
 module Day2 where
 
-import Data.List
+import           Control.Applicative
+import           Data.List
+import           Data.Scientific (floatingOrInteger)
+import qualified Data.ByteString.Char8 as BS
+import           Data.Attoparsec.ByteString.Char8
+
 
 prob1 :: [[Int]] -> Int
 prob1 m = sum $ map maxDiff m
@@ -15,10 +20,23 @@ prob2 m = sum $ map rowValue m
           | rem y x == 0 = div y x
           | otherwise    = 1
 
-mkRow :: String -> [Int]
-mkRow l = map (\n -> read n::Int) $ words l
+parser :: Parser [[Int]]
+parser = sepBy1 (sepBy1 parseNum spaceOrTab) endOfLine
+  where
+    parseNum = fmap toInt scientific
+    spaceOrTab = char ' ' <|> char '\t'
+    toInt s  = either (error "Invalid input") id $ floatingOrInteger s
 
-loadPuzzle :: FilePath -> IO [[Int]]
-loadPuzzle f = do
-  ll <- fmap lines $ readFile f
-  return $ map mkRow ll
+withInput :: FilePath -> Parser a -> IO a
+withInput path p = do
+  f <- BS.readFile path
+  let result = parseOnly p f
+  either (error . show) return result
+
+day02 :: IO ()
+day02 =
+  withInput "data/Day2.txt" parser >>= \parsed -> do
+    putStrLn "Problem 1"
+    print $ prob1 parsed
+    putStrLn "Problem 2"
+    print $ prob2 parsed
